@@ -84,6 +84,12 @@
             <artifactId>alfresco-repository</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpg-jdk15on</artifactId>
+            <version>1.47</version>
+        </dependency>
+
         <!-- Bring in Spring Context so we can use ApplicationContext, ApplicationContextAware etc -->
         <dependency>
             <groupId>org.springframework</groupId>
