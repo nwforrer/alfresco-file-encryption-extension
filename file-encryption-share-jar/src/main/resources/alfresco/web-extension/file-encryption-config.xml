@@ -1,0 +1,52 @@
+<!-- Share configuration related to this particular Share module extension, such as:
+     - Doclib action config
+     - Form config
+     - Aspect and Type config
+     - Advanced Search
+
+    Note. Any configuration related to the whole Share.war webapp
+           (i.e. not specific to this share extension) should be
+            placed in the environment specific config file:
+             alfresco/tomcat/shared/classes/alfresco/web-extension/share-config-custom.xml
+     -->
+<alfresco-config>
+    <!--================================================================================================================
+        Make custom types and aspects visible in "Change Type" and "Manage Aspects" actions.
+         This will also make them visible when creating rules.
+        (will be merged with out-of-the-box configured types and aspects)
+    =============================================================================================================-->
+
+    <config evaluator="string-compare" condition="DocumentLibrary">
+        <aspects>
+            <visible>
+                <aspect name="encryption:encrypted"/>
+            </visible>
+            <addable> <!-- defaults to visible config -->
+            </addable>
+            <removeable> <!-- defaults to visible config -->
+            </removeable>
+        </aspects>
+    </config>
+    <config evaluator="string-compare" condition="DocLibActions">
+        <actions>
+            <action id="file-encryption-decrypt-file" type="javascript" label="file-encryption.action.decrypt-file-action.label" icon="document-manage-permissions">
+                <param name="function">onActionSimpleRepoAction</param>
+                <param name="action">decrypt-file-action</param>
+                <param name="failureMessage">file-encryption.action.decrypt-file-action.failure</param>
+                <param name="successMessage">file-encryption.action.decrypt-file-action.success</param>
+                <evaluator>evaluator.file-encryption.encrypted</evaluator>
+                <permissions>
+                    <permission allow="true">Write</permission>
+                </permissions>
+            </action>
+        </actions>
+        <actionGroups>
+            <actionGroup id="document-browse">
+                <action index="400" id="file-encryption-decrypt-file" />
+            </actionGroup>
+            <actionGroup id="document-details">
+                <action index="400" id="file-encryption-decrypt-file" />
+            </actionGroup>
+        </actionGroups>
+    </config>
+</alfresco-config>

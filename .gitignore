@@ -1,0 +1,8 @@
+/file-encryption-platform-jar/target/
+/file-encryption-share-jar/target/
+/target/test-classes/
+/alf_data_dev/
+/.idea/
+/integration-tests/target/
+
+*.log*
