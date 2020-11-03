@@ -51,6 +51,13 @@ public class DecryptFileAction extends ActionExecuterAbstractBase {
 
             IOUtils.copy(decryptedContent, out);
 
+            // strip the .pgp extension if it exists.
+            String fileName = (String) serviceRegistry.getNodeService().getProperty(nodeRef, ContentModel.PROP_NAME);
+            if (fileName.endsWith(".pgp")) {
+                fileName = fileName.substring(0, fileName.length() - 4);
+                serviceRegistry.getNodeService().setProperty(nodeRef, ContentModel.PROP_NAME, fileName);
+            }
+
             serviceRegistry.getNodeService().removeAspect(nodeRef, EncryptionModel.ASPECT_ENCRYPTED);
         } catch (Exception e) {
             LOGGER.error("Failed to decrypt file.", e);
