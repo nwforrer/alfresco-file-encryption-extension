@@ -464,8 +464,15 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
-<modules>  <module>file-encryption-platform-jar</module>
-    <module>file-encryption-share-jar</module>
-    <module>integration-tests</module>
-  </modules>
+    <modules>
+        <module>file-encryption-platform-jar</module>
+        <module>file-encryption-share-jar</module>
+        <module>integration-tests</module>
+    </modules>
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/nwforrer/alfresco-file-encryption-extension</url>
+        </repository>
+    </distributionManagement>
 </project>
