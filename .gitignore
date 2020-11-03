@@ -5,4 +5,4 @@
 /.idea/
 /integration-tests/target/
 
-*.log
+*.log*
