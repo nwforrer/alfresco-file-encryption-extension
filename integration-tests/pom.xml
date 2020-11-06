@@ -9,7 +9,7 @@
                                             nothing is compiled (i.e. you cannot set it to pom) -->
 
     <parent>
-        <groupId>io.github.nwforrer</groupId>
+        <groupId>com.github.nwforrer</groupId>
         <artifactId>file-encryption</artifactId>
         <version>1.1.1</version>
     </parent>
@@ -21,7 +21,7 @@
         <!-- Bring in any custom module that should be tested, by default we bring in the Platform JAR module
              that is generated for the AIO project -->
         <dependency>
-            <groupId>io.github.nwforrer</groupId>
+            <groupId>com.github.nwforrer</groupId>
             <artifactId>file-encryption-platform-jar</artifactId>
             <version>1.1.1</version>
             <scope>test</scope>
