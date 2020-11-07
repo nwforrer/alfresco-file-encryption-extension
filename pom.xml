@@ -7,6 +7,7 @@
     <name>AIO - SDK 3.0</name>
     <description>All-In-One (AIO) project for SDK 3.0</description>
     <packaging>pom</packaging>
+    <url>https://github.com/nwforrer/alfresco-file-encryption-extension</url>
 
     <properties>
         <!-- Alfresco Maven Plugin version to use -->
@@ -283,10 +284,10 @@
                         <gitFlowConfig>
                             <productionBranch>master</productionBranch>
                             <developmentBranch>develop</developmentBranch>
-                            <featureBranchPrefix>feature</featureBranchPrefix>
-                            <releaseBranchPrefix>release</releaseBranchPrefix>
-                            <hotfixBranchPrefix>hotfix</hotfixBranchPrefix>
-                            <supportBranchPrefix>support</supportBranchPrefix>
+                            <featureBranchPrefix>feature/</featureBranchPrefix>
+                            <releaseBranchPrefix>release/</releaseBranchPrefix>
+                            <hotfixBranchPrefix>hotfix/</hotfixBranchPrefix>
+                            <supportBranchPrefix>support/</supportBranchPrefix>
                             <origin>origin</origin>
                         </gitFlowConfig>
                         <useSnapshotInHotfix>true</useSnapshotInHotfix>
