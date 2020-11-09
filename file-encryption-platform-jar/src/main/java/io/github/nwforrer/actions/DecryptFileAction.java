@@ -53,7 +53,7 @@ public class DecryptFileAction extends ActionExecuterAbstractBase {
 
             // strip the .pgp extension if it exists.
             String fileName = (String) serviceRegistry.getNodeService().getProperty(nodeRef, ContentModel.PROP_NAME);
-            if (fileName.endsWith(".pgp")) {
+            if (fileName.endsWith(".pgp") || fileName.endsWith(".asc") || fileName.endsWith(".gpg")) {
                 fileName = fileName.substring(0, fileName.length() - 4);
                 serviceRegistry.getNodeService().setProperty(nodeRef, ContentModel.PROP_NAME, fileName);
             }
