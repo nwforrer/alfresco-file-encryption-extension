@@ -1,15 +1,17 @@
 package io.github.nwforrer.encryption;
 
+import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.*;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentVerifierBuilderProvider;
-import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
-import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyDataDecryptorFactoryBuilder;
+import org.bouncycastle.openpgp.operator.PGPDataEncryptorBuilder;
+import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
+import org.bouncycastle.openpgp.operator.jcajce.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.security.SignatureException;
+import java.util.Date;
 import java.util.Iterator;
 
 @Component
@@ -55,6 +57,38 @@ public class GPGEncryptionUtil {
             }
         } else {
             throw new PGPException("unable to verify message");
+        }
+    }
+
+    public void encryptFile(InputStream in, OutputStream out, InputStream publicKeyIn) throws IOException, PGPException {
+        PGPPublicKey publicKey = readPublicKeyFromCol(publicKeyIn);
+        if (publicKey != null) {
+            out = new ArmoredOutputStream(out);
+
+            PGPEncryptedDataGenerator encryptedDataGenerator = new PGPEncryptedDataGenerator(
+                    new JcePGPDataEncryptorBuilder(PGPEncryptedData.TRIPLE_DES)
+                            .setWithIntegrityPacket(true)
+                            .setProvider(BC_PROVIDER)
+            );
+            encryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider(BC_PROVIDER));
+
+            OutputStream encryptedOut = encryptedDataGenerator.open(out, new byte[8192]);
+            OutputStream compressedData = new PGPCompressedDataGenerator(PGPCompressedData.ZIP).open(encryptedOut);
+
+            OutputStream finalOut = new PGPLiteralDataGenerator().open(compressedData, PGPLiteralDataGenerator.BINARY, "", new Date(), new byte[8192]);
+
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                finalOut.write(buf, 0, len);
+            }
+
+            finalOut.close();
+            compressedData.close();
+            encryptedOut.close();
+            out.close();
+        } else {
+            throw new PGPException("unable to read public key file");
         }
     }
 
