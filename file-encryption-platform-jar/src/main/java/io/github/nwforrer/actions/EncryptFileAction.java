@@ -11,54 +11,47 @@ import org.alfresco.service.cmr.action.ParameterDefinition;
 import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentWriter;
 import org.alfresco.service.cmr.repository.NodeRef;
+import org.bouncycastle.openpgp.PGPException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.List;
 
-public class DecryptFileAction extends ActionExecuterAbstractBase {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DecryptFileAction.class);
+public class EncryptFileAction extends ActionExecuterAbstractBase {
+    private static final Logger LOGGER = LoggerFactory.getLogger(EncryptFileAction.class);
 
     private final ServiceRegistry serviceRegistry;
     private final GPGEncryptionUtil gpgEncryptionUtil;
 
     private String publicKeyPath;
-    private String privateKeyPath;
-    private String privateKeyPassword;
 
-    public DecryptFileAction(ServiceRegistry serviceRegistry, GPGEncryptionUtil gpgEncryptionUtil) {
+    public EncryptFileAction(ServiceRegistry serviceRegistry, GPGEncryptionUtil gpgEncryptionUtil) {
         this.serviceRegistry = serviceRegistry;
         this.gpgEncryptionUtil = gpgEncryptionUtil;
     }
 
     @Override
     protected void executeImpl(Action action, NodeRef nodeRef) {
-        LOGGER.info("Executing decrypt file action.");
+        LOGGER.info("Executing encrypt file action.");
 
         ContentReader reader = serviceRegistry.getContentService().getReader(nodeRef, ContentModel.PROP_CONTENT);
         ContentWriter writer = serviceRegistry.getContentService().getWriter(nodeRef, ContentModel.PROP_CONTENT, true);
 
-        try (InputStream privateKey = new FileInputStream(privateKeyPath);
-             InputStream publicKey = new FileInputStream(publicKeyPath);
+        try (InputStream publicKey = new FileInputStream(publicKeyPath);
              InputStream nodeContent = reader.getContentInputStream();
              OutputStream out = writer.getContentOutputStream()) {
-            gpgEncryptionUtil.decryptFile(nodeContent, out, privateKey, publicKey, privateKeyPassword.toCharArray());
+            gpgEncryptionUtil.encryptFile(nodeContent, out, publicKey);
 
-            // strip the .pgp extension if it exists.
+            // add a .pgp extension to filename
             String fileName = (String) serviceRegistry.getNodeService().getProperty(nodeRef, ContentModel.PROP_NAME);
-            if (fileName.endsWith(".pgp") || fileName.endsWith(".asc") || fileName.endsWith(".gpg")) {
-                fileName = fileName.substring(0, fileName.length() - 4);
-                serviceRegistry.getNodeService().setProperty(nodeRef, ContentModel.PROP_NAME, fileName);
-            }
+            fileName += ".pgp";
+            serviceRegistry.getNodeService().setProperty(nodeRef, ContentModel.PROP_NAME, fileName);
 
-            serviceRegistry.getNodeService().removeAspect(nodeRef, EncryptionModel.ASPECT_ENCRYPTED);
+            serviceRegistry.getNodeService().addAspect(nodeRef, EncryptionModel.ASPECT_ENCRYPTED, null);
         } catch (Exception e) {
-            LOGGER.error("Failed to decrypt file.", e);
-            throw new AlfrescoRuntimeException("Failed to decrypt the file.", e);
+            LOGGER.error("Failed to encrypt file.", e);
+            throw new AlfrescoRuntimeException("Failed to encrypt file", e);
         }
     }
 
@@ -70,13 +63,4 @@ public class DecryptFileAction extends ActionExecuterAbstractBase {
     public void setPublicKeyPath(String publicKeyPath) {
         this.publicKeyPath = publicKeyPath;
     }
-
-    public void setPrivateKeyPath(String privateKeyPath) {
-        this.privateKeyPath = privateKeyPath;
-    }
-
-    public void setPrivateKeyPassword(String privateKeyPassword) {
-        this.privateKeyPassword = privateKeyPassword;
-    }
 }
-

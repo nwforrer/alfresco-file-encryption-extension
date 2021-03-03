@@ -1,25 +1,39 @@
 package io.github.nwforrer.encryption;
 
+import org.bouncycastle.bcpg.ArmoredOutputStream;
+import org.bouncycastle.openpgp.PGPUtil;
 import org.bouncycastle.openpgp.*;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentVerifierBuilderProvider;
-import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
-import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyDataDecryptorFactoryBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.bouncycastle.openpgp.operator.jcajce.*;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.SignatureException;
+import java.util.Date;
 import java.util.Iterator;
 
 @Component
 public class GPGEncryptionUtil {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GPGEncryptionUtil.class);
     public static final String BC_PROVIDER = "BC";
 
+    private static final int BUFFER_CHUNK_SIZE = 8192; // used as a chunk size when processing buffers into an OutputStream
+
+    /**
+     * Decrypt the content available in the given `in` parameter, and write it to the given `out` parameter.
+     *
+     * @param in InputStream of content to be decrypted
+     * @param out OutputStream to write the decrypted content to
+     * @param privateKeyIn InputStream of the private key used to decrypt the content
+     * @param publicKeyIn InputStream of the public key used to decrypt the content
+     * @param passwd Password associated with the private key
+     * @throws IOException thrown when encountering exceptions reading the input, private key, public key, or writing to the output.
+     * @throws SignatureException thrown when encountering issues parsing the public/private key
+     * @throws PGPException thrown when unable to parse the encrypted content
+     */
     @SuppressWarnings("rawtypes")
-    public InputStream decryptFile(InputStream in, InputStream privateKeyIn, InputStream publicKeyIn, char[] passwd) throws IOException, SignatureException, PGPException {
+    public void decryptFile(InputStream in, OutputStream out, InputStream privateKeyIn, InputStream publicKeyIn, char[] passwd) throws IOException, SignatureException, PGPException {
         in = PGPUtil.getDecoderStream(in);
 
         PGPObjectFactory pgpF = new PGPObjectFactory(in);
@@ -47,9 +61,9 @@ public class GPGEncryptionUtil {
             PGPObjectFactory  pgpFact = new PGPObjectFactory(cData.getDataStream());
             message = pgpFact.nextObject();
             if (message instanceof PGPLiteralData){
-                return parsePGLiteralData((PGPLiteralData) message);
+                parsePGLiteralData((PGPLiteralData) message, out);
             }else if (message instanceof PGPOnePassSignatureList) {
-                return parsePGOnePassSignatureList(publicKeyIn, (PGPOnePassSignatureList) message, pgpFact);
+                parsePGOnePassSignatureList(publicKeyIn, (PGPOnePassSignatureList) message, pgpFact, out);
             } else {
                 throw new PGPException("message is not a simple encrypted file - type unknown.");
             }
@@ -58,49 +72,70 @@ public class GPGEncryptionUtil {
         }
     }
 
-    private InputStream parsePGOnePassSignatureList(InputStream publicKeyIn, PGPOnePassSignatureList message, PGPObjectFactory pgpFact) throws IOException, PGPException, SignatureException {
+    /**
+     * Encrypts the content passed in the `in` stream, and writes it to the `out` stream.
+     *
+     * @param in Content to be encrypted
+     * @param out Destination for the encrypted content
+     * @param publicKeyIn Public key to encrypt the content
+     * @throws IOException thrown when encountering issues reading the input or public key
+     * @throws PGPException thrown when unable to encrypt the content
+     */
+    public void encryptFile(InputStream in, OutputStream out, InputStream publicKeyIn) throws IOException, PGPException {
+        PGPPublicKey publicKey = readPublicKeyFromCol(publicKeyIn);
+        if (publicKey != null) {
+            out = new ArmoredOutputStream(out);
+
+            PGPEncryptedDataGenerator encryptedDataGenerator = new PGPEncryptedDataGenerator(
+                    new JcePGPDataEncryptorBuilder(PGPEncryptedData.TRIPLE_DES)
+                            .setWithIntegrityPacket(true)
+                            .setProvider(BC_PROVIDER)
+            );
+            encryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider(BC_PROVIDER));
+
+            OutputStream encryptedOut = encryptedDataGenerator.open(out, new byte[BUFFER_CHUNK_SIZE]);
+            OutputStream compressedData = new PGPCompressedDataGenerator(PGPCompressedData.ZIP).open(encryptedOut);
+
+            OutputStream finalOut = new PGPLiteralDataGenerator().open(compressedData, PGPLiteralDataGenerator.BINARY, "", new Date(), new byte[BUFFER_CHUNK_SIZE]);
+
+            byte[] buf = new byte[BUFFER_CHUNK_SIZE];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                finalOut.write(buf, 0, len);
+            }
+
+            finalOut.close();
+            compressedData.close();
+            encryptedOut.close();
+            out.close();
+        } else {
+            throw new PGPException("unable to read public key file");
+        }
+    }
+
+    private void parsePGOnePassSignatureList(InputStream publicKeyIn, PGPOnePassSignatureList message, PGPObjectFactory pgpFact, OutputStream out) throws IOException, PGPException, SignatureException {
         PGPPublicKey key =readPublicKeyFromCol(publicKeyIn);
         if (key != null){
             PGPOnePassSignature ops = message.get(0);
             ops.init(new JcaPGPContentVerifierBuilderProvider().setProvider(BC_PROVIDER), key);
 
-            try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-                 PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
-
-                PGPLiteralData p2 = (PGPLiteralData) pgpFact.nextObject();
-                int ch;
-                InputStream dIn = p2.getInputStream();
-                while ((ch = dIn.read()) >= 0) {
-                    ops.update((byte) ch);
-                    out.write(ch);
-                }
-
-                PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream);
-
-                out.writeTo(pipedOutputStream);
-
-                return pipedInputStream;
+            PGPLiteralData p2 = (PGPLiteralData) pgpFact.nextObject();
+            int ch;
+            InputStream dIn = p2.getInputStream();
+            while ((ch = dIn.read()) >= 0) {
+                ops.update((byte) ch);
+                out.write(ch);
             }
         } else {
             throw new PGPException ("unable to find public key for signed file");
         }
     }
 
-    private PipedInputStream parsePGLiteralData(PGPLiteralData message) throws IOException {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
-
-            InputStream unc = message.getInputStream();
-            int ch;
-            while ((ch = unc.read()) >= 0) {
-                out.write(ch);
-            }
-
-            PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream);
-
-            out.writeTo(pipedOutputStream);
-
-            return pipedInputStream;
+    private void parsePGLiteralData(PGPLiteralData message, OutputStream out) throws IOException {
+        InputStream unc = message.getInputStream();
+        int ch;
+        while ((ch = unc.read()) >= 0) {
+            out.write(ch);
         }
     }
 

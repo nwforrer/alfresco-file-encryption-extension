@@ -30,8 +30,8 @@ jobs:
     - name: Prepare mvnw
       run: chmod +x ./mvnw
 
-    - name: Build with Maven
-      run: ./mvnw clean verify -B
+    - name: Run tests
+      run: ./mvnw test -B
 
     - name: Import GPG owner trust
       run: echo ${{secrets.GPG_OWNERTRUST}} | base64 --decode | gpg --import-ownertrust
