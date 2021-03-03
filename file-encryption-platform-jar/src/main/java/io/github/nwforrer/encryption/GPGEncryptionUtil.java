@@ -1,15 +1,14 @@
 package io.github.nwforrer.encryption;
 
 import org.bouncycastle.bcpg.ArmoredOutputStream;
+import org.bouncycastle.openpgp.PGPUtil;
 import org.bouncycastle.openpgp.*;
-import org.bouncycastle.openpgp.operator.PGPDataEncryptorBuilder;
-import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.bouncycastle.openpgp.operator.jcajce.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.SignatureException;
 import java.util.Date;
 import java.util.Iterator;
@@ -17,11 +16,10 @@ import java.util.Iterator;
 @Component
 public class GPGEncryptionUtil {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GPGEncryptionUtil.class);
     public static final String BC_PROVIDER = "BC";
 
     @SuppressWarnings("rawtypes")
-    public InputStream decryptFile(InputStream in, InputStream privateKeyIn, InputStream publicKeyIn, char[] passwd) throws IOException, SignatureException, PGPException {
+    public void decryptFile(InputStream in, OutputStream out, InputStream privateKeyIn, InputStream publicKeyIn, char[] passwd) throws IOException, SignatureException, PGPException {
         in = PGPUtil.getDecoderStream(in);
 
         PGPObjectFactory pgpF = new PGPObjectFactory(in);
@@ -49,9 +47,9 @@ public class GPGEncryptionUtil {
             PGPObjectFactory  pgpFact = new PGPObjectFactory(cData.getDataStream());
             message = pgpFact.nextObject();
             if (message instanceof PGPLiteralData){
-                return parsePGLiteralData((PGPLiteralData) message);
+                parsePGLiteralData((PGPLiteralData) message, out);
             }else if (message instanceof PGPOnePassSignatureList) {
-                return parsePGOnePassSignatureList(publicKeyIn, (PGPOnePassSignatureList) message, pgpFact);
+                parsePGOnePassSignatureList(publicKeyIn, (PGPOnePassSignatureList) message, pgpFact, out);
             } else {
                 throw new PGPException("message is not a simple encrypted file - type unknown.");
             }
@@ -92,49 +90,29 @@ public class GPGEncryptionUtil {
         }
     }
 
-    private InputStream parsePGOnePassSignatureList(InputStream publicKeyIn, PGPOnePassSignatureList message, PGPObjectFactory pgpFact) throws IOException, PGPException, SignatureException {
+    private void parsePGOnePassSignatureList(InputStream publicKeyIn, PGPOnePassSignatureList message, PGPObjectFactory pgpFact, OutputStream out) throws IOException, PGPException, SignatureException {
         PGPPublicKey key =readPublicKeyFromCol(publicKeyIn);
         if (key != null){
             PGPOnePassSignature ops = message.get(0);
             ops.init(new JcaPGPContentVerifierBuilderProvider().setProvider(BC_PROVIDER), key);
 
-            try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-                 PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
-
-                PGPLiteralData p2 = (PGPLiteralData) pgpFact.nextObject();
-                int ch;
-                InputStream dIn = p2.getInputStream();
-                while ((ch = dIn.read()) >= 0) {
-                    ops.update((byte) ch);
-                    out.write(ch);
-                }
-
-                PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream);
-
-                out.writeTo(pipedOutputStream);
-
-                return pipedInputStream;
+            PGPLiteralData p2 = (PGPLiteralData) pgpFact.nextObject();
+            int ch;
+            InputStream dIn = p2.getInputStream();
+            while ((ch = dIn.read()) >= 0) {
+                ops.update((byte) ch);
+                out.write(ch);
             }
         } else {
             throw new PGPException ("unable to find public key for signed file");
         }
     }
 
-    private PipedInputStream parsePGLiteralData(PGPLiteralData message) throws IOException {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
-
-            InputStream unc = message.getInputStream();
-            int ch;
-            while ((ch = unc.read()) >= 0) {
-                out.write(ch);
-            }
-
-            PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream);
-
-            out.writeTo(pipedOutputStream);
-
-            return pipedInputStream;
+    private void parsePGLiteralData(PGPLiteralData message, OutputStream out) throws IOException {
+        InputStream unc = message.getInputStream();
+        int ch;
+        while ((ch = unc.read()) >= 0) {
+            out.write(ch);
         }
     }
 

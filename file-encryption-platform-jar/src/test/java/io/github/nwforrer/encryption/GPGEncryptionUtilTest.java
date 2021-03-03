@@ -93,13 +93,15 @@ public class GPGEncryptionUtilTest {
         InputStream privateKey = new ByteArrayInputStream(privateKeyString.getBytes());
         InputStream publicKey = new ByteArrayInputStream(publicKeyString.getBytes());
 
-        InputStream decryptedMessage = gpgEncryptionUtil.decryptFile(encryptedMessage, privateKey, publicKey, "password".toCharArray());
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            gpgEncryptionUtil.decryptFile(encryptedMessage, out, privateKey, publicKey, "password".toCharArray());
 
-        String decryptedString = new BufferedReader(new InputStreamReader(decryptedMessage))
-                .lines()
-                .collect(Collectors.joining("\n"));
+            String decryptedString = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(out.toByteArray())))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
 
-        assertEquals("this is the file", decryptedString);
+            assertEquals("this is the file", decryptedString);
+        }
     }
 
     @Test
@@ -166,12 +168,13 @@ public class GPGEncryptionUtilTest {
         InputStream privateKey = new ByteArrayInputStream(privateKeyString.getBytes());
         InputStream publicKey = new ByteArrayInputStream(publicKeyString.getBytes());
 
-        try (ByteArrayOutputStream encryptedOutStream = new ByteArrayOutputStream()) {
+        try (ByteArrayOutputStream encryptedOutStream = new ByteArrayOutputStream();
+             ByteArrayOutputStream decryptedOutStream = new ByteArrayOutputStream()) {
             gpgEncryptionUtil.encryptFile(originalMessage, encryptedOutStream, publicKey);
 
-            InputStream decryptedMessage = gpgEncryptionUtil.decryptFile(new ByteArrayInputStream(encryptedOutStream.toByteArray()), privateKey, publicKey, "password".toCharArray());
+            gpgEncryptionUtil.decryptFile(new ByteArrayInputStream(encryptedOutStream.toByteArray()), decryptedOutStream, privateKey, publicKey, "password".toCharArray());
 
-            String decryptedString = new BufferedReader(new InputStreamReader(decryptedMessage))
+            String decryptedString = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(decryptedOutStream.toByteArray())))
                     .lines()
                     .collect(Collectors.joining("\n"));
 

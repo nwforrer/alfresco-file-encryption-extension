@@ -11,7 +11,6 @@ import org.alfresco.service.cmr.action.ParameterDefinition;
 import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentWriter;
 import org.alfresco.service.cmr.repository.NodeRef;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,10 +45,8 @@ public class DecryptFileAction extends ActionExecuterAbstractBase {
         try (InputStream privateKey = new FileInputStream(privateKeyPath);
              InputStream publicKey = new FileInputStream(publicKeyPath);
              InputStream nodeContent = reader.getContentInputStream();
-             InputStream decryptedContent = gpgEncryptionUtil.decryptFile(nodeContent, privateKey, publicKey, privateKeyPassword.toCharArray());
              OutputStream out = writer.getContentOutputStream()) {
-
-            IOUtils.copy(decryptedContent, out);
+            gpgEncryptionUtil.decryptFile(nodeContent, out, privateKey, publicKey, privateKeyPassword.toCharArray());
 
             // strip the .pgp extension if it exists.
             String fileName = (String) serviceRegistry.getNodeService().getProperty(nodeRef, ContentModel.PROP_NAME);
