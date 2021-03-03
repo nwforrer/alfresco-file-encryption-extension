@@ -29,5 +29,11 @@
         <property name="privateKeyPassword" value="${io.github.nwforrer.encryption.private-key-password}" />
     </bean>
 
+    <bean id="encrypt-file-action" class="io.github.nwforrer.actions.EncryptFileAction" parent="action-executer">
+        <constructor-arg ref="ServiceRegistry" />
+        <constructor-arg ref="GPGEncryptionUtil" />
+
+        <property name="publicKeyPath" value="${io.github.nwforrer.encryption.public-key-path}" />
+    </bean>
 
 </beans>
