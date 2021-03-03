@@ -18,6 +18,18 @@ public class GPGEncryptionUtil {
 
     public static final String BC_PROVIDER = "BC";
 
+    /**
+     * Decrypt the content available in the given `in` parameter, and write it to the given `out` parameter.
+     *
+     * @param in InputStream of content to be decrypted
+     * @param out OutputStream to write the decrypted content to
+     * @param privateKeyIn InputStream of the private key used to decrypt the content
+     * @param publicKeyIn InputStream of the public key used to decrypt the content
+     * @param passwd Password associated with the private key
+     * @throws IOException thrown when encountering exceptions reading the input, private key, public key, or writing to the output.
+     * @throws SignatureException thrown when encountering issues parsing the public/private key
+     * @throws PGPException thrown when unable to parse the encrypted content
+     */
     @SuppressWarnings("rawtypes")
     public void decryptFile(InputStream in, OutputStream out, InputStream privateKeyIn, InputStream publicKeyIn, char[] passwd) throws IOException, SignatureException, PGPException {
         in = PGPUtil.getDecoderStream(in);
@@ -58,6 +70,15 @@ public class GPGEncryptionUtil {
         }
     }
 
+    /**
+     * Encrypts the content passed in the `in` stream, and writes it to the `out` stream.
+     *
+     * @param in Content to be encrypted
+     * @param out Destination for the encrypted content
+     * @param publicKeyIn Public key to encrypt the content
+     * @throws IOException thrown when encountering issues reading the input or public key
+     * @throws PGPException thrown when unable to encrypt the content
+     */
     public void encryptFile(InputStream in, OutputStream out, InputStream publicKeyIn) throws IOException, PGPException {
         PGPPublicKey publicKey = readPublicKeyFromCol(publicKeyIn);
         if (publicKey != null) {
