@@ -18,6 +18,8 @@ public class GPGEncryptionUtil {
 
     public static final String BC_PROVIDER = "BC";
 
+    private static final int BUFFER_CHUNK_SIZE = 8192; // used as a chunk size when processing buffers into an OutputStream
+
     /**
      * Decrypt the content available in the given `in` parameter, and write it to the given `out` parameter.
      *
@@ -91,12 +93,12 @@ public class GPGEncryptionUtil {
             );
             encryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider(BC_PROVIDER));
 
-            OutputStream encryptedOut = encryptedDataGenerator.open(out, new byte[8192]);
+            OutputStream encryptedOut = encryptedDataGenerator.open(out, new byte[BUFFER_CHUNK_SIZE]);
             OutputStream compressedData = new PGPCompressedDataGenerator(PGPCompressedData.ZIP).open(encryptedOut);
 
-            OutputStream finalOut = new PGPLiteralDataGenerator().open(compressedData, PGPLiteralDataGenerator.BINARY, "", new Date(), new byte[8192]);
+            OutputStream finalOut = new PGPLiteralDataGenerator().open(compressedData, PGPLiteralDataGenerator.BINARY, "", new Date(), new byte[BUFFER_CHUNK_SIZE]);
 
-            byte[] buf = new byte[8192];
+            byte[] buf = new byte[BUFFER_CHUNK_SIZE];
             int len;
             while ((len = in.read(buf)) > 0) {
                 finalOut.write(buf, 0, len);
