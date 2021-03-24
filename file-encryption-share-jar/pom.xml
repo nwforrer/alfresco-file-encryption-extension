@@ -10,7 +10,7 @@
     <parent>
         <groupId>com.github.nwforrer</groupId>
         <artifactId>file-encryption</artifactId>
-        <version>2.0.2-detect-pgpliteraldata-SNAPSHOT</version>
+        <version>2.0.2-SNAPSHOT</version>
     </parent>
 
     <properties>
