@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.github.nwforrer</groupId>
         <artifactId>file-encryption</artifactId>
-        <version>2.0.2-SNAPSHOT</version>
+        <version>2.0.2-detect-pgpliteraldata-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -23,7 +23,7 @@
         <dependency>
             <groupId>com.github.nwforrer</groupId>
             <artifactId>file-encryption-platform-jar</artifactId>
-            <version>2.0.2-SNAPSHOT</version>
+            <version>2.0.2-detect-pgpliteraldata-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
