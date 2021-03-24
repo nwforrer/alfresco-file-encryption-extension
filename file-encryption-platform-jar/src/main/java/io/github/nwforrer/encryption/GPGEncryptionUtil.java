@@ -56,17 +56,19 @@ public class GPGEncryptionUtil {
         InputStream clear = pbe.getDataStream(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(BC_PROVIDER).setContentProvider(BC_PROVIDER).build(sKey));
         PGPObjectFactory plainFact = new PGPObjectFactory(clear);
         Object message = plainFact.nextObject();
-        if (message instanceof PGPCompressedData){
-            PGPCompressedData   cData = (PGPCompressedData)message;
-            PGPObjectFactory  pgpFact = new PGPObjectFactory(cData.getDataStream());
+        if (message instanceof PGPCompressedData) {
+            PGPCompressedData cData = (PGPCompressedData) message;
+            PGPObjectFactory pgpFact = new PGPObjectFactory(cData.getDataStream());
             message = pgpFact.nextObject();
-            if (message instanceof PGPLiteralData){
+            if (message instanceof PGPLiteralData) {
                 parsePGLiteralData((PGPLiteralData) message, out);
-            }else if (message instanceof PGPOnePassSignatureList) {
+            } else if (message instanceof PGPOnePassSignatureList) {
                 parsePGOnePassSignatureList(publicKeyIn, (PGPOnePassSignatureList) message, pgpFact, out);
             } else {
                 throw new PGPException("message is not a simple encrypted file - type unknown.");
             }
+        } else if (message instanceof PGPLiteralData) {
+            parsePGLiteralData((PGPLiteralData) message, out);
         } else {
             throw new PGPException("unable to verify message");
         }
